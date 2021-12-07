@@ -1,0 +1,1 @@
+C:\Soft\Qt\Tools\mingw810_64\bin\g++ -std=c++17 -O3 [input] -IDMFramework/utils/ -IDMFramework/celstial_models/ -static -static-libgcc -o [output]
