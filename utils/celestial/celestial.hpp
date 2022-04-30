@@ -1,11 +1,14 @@
 #ifndef CELESTIAL_H
 #define CELESTIAL_H
 
-#include "../grid_function.hpp"
-#include "../vectoroperators.hpp"
+#include "../functions/grid_function.hpp"
+#include "../functions/vectoroperators.hpp"
 #include <string>
 #include <cmath>
 
+#define VESC_SUN 2.056e-3
+#define VESC_JUPITER 2.03e-4
+#define VESC_EARTH 3.73e-5
 
 static const std::map<std::string, double> ME = {
 			{"H",1.0},{"H1",1.0},{"Li",7.0},{"He4",4.0},{"He3",3.0},{"C",12.0},{"C12",12.0},{"C13",13.0},
@@ -34,7 +37,7 @@ class BodyModel{
 	
 	
 public:
-	BodyModel(double VescOnR,const char * LoadFileName):
+    BodyModel(double VescOnR,const std::string &LoadFileName):
 	_VescMin(VescOnR),
 	BM(Function::CSVTable(LoadFileName)){
 		if(BM.find("Vesc") == BM.end()){
@@ -50,7 +53,7 @@ public:
 	const std::vector<double> &operator[](const std::string & column) const{
 		return BM.at(column);
 	}
-		double VescMin() const{
+    double VescMin() const{
 		return _VescMin;
 	}
 	double VescMax() const{

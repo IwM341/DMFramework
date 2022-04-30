@@ -1,7 +1,9 @@
 #ifndef MOMENTS_H
 #define MOMENTS_H
 
-#include "../montecarlo.hpp"
+#include "../montecarlo/montecarlo.hpp"
+#include "../complex/complex_ex.hpp"
+#include "../debug/debugdef.hpp"
 #include <cmath>
 
 #define Iion 0.2833594103
@@ -56,6 +58,41 @@ extern inline double deltaEMgd(int n){
 	return Rd*(1.0-1.0/(n*n));
 }
 
+extern inline double phiMax(double deltaEmax){
+    return sqrt(deltaEmax/Rd-1.0);
+}
 
+extern inline int nMax(double deltaEmax){
+    int res = 1.0/sqrt(1.0-deltaEmax/Rd);
+    if(res > 100 || deltaEmax>Rd){
+        return 100;
+    }
+    else return res;
+}
+
+enum IonFactorDiff{
+    dphi,dE_Rd
+};
+double IonFactor(double s,double phi, IonFactorDiff F = dphi){
+    double sum = phi+s;
+    double delta = s-phi;
+    double diff_fact = (F == dphi ? 2*phi : 1.0);
+
+    double exps = (phi <= 1e-6 ?
+                       exp(-4/(1.0+s*s)) :
+                       exp(-2*(atan(sum)-atan(delta))/phi)/
+                                       (1.0-exp(-2*M_PI/phi)));
+
+
+    return diff_fact*(128.0*s*s*(1.0+3*s*s+phi*phi))*
+                      exps/(3*fast_pow((1+sum*sum)*(1+delta*delta),3));
+}
+
+double MigdalFactor(double s, int n){
+    return s*s/3*16*fast_pow(n,4)*fast_pow(1.0/(n*n-1.0),2)/sqrt(n*(n*n-1.0))*fast_pow((n-1.0)/(n+1.0),n);
+}
+double ElasticFactor(double s, int n){
+    return fast_pow(1+s*s/4,4);
+}
 
 #endif

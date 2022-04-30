@@ -1,12 +1,15 @@
 #ifndef UTILS
 #define UTILS
 
-#include <vectoroperators.hpp>
-#include <phase4.hpp>
-#include <montecarlo.hpp>
-#include <integrator.hpp>
-#include <grid_function.hpp>
-#include <celestial/celestial.hpp>
-#include <atomic/moments.hpp>
+#include "functions/vectoroperators.hpp"
+#include "vectors/phase4.hpp"
+#include "montecarlo/montecarlo.hpp"
+#include "functions/integrator.hpp"
+#include "functions/grid_function.hpp"
+#include "celestial/celestial.hpp"
+#include "atomic/moments.hpp"
+#include "debug/debugdef.hpp"
+
+
 
 #endif

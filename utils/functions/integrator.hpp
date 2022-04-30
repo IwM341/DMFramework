@@ -8,7 +8,7 @@
 #include <vector>
 	
 template <typename FuncType>			
-extern inline double integrateAB(FuncType f,double a,double b,int N){
+auto integrateAB(FuncType f,double a,double b,int N){
 	
 	double sum = 0.0;
 	double h = (b-a)/N;
@@ -19,7 +19,7 @@ extern inline double integrateAB(FuncType f,double a,double b,int N){
 }
 
 template <typename FuncType>			
-extern inline double integrateABP(FuncType f,double a,double b,int N){
+auto integrateABP(FuncType f,double a,double b,int N){
 	
 	double sum = 0.0;
 	double h = (b-a)/N;
@@ -50,7 +50,7 @@ const double Wh[5] = {.28444444444444444444, .23931433524968323402, .23931433524
 
 
 template <typename FuncType>	
-extern inline double integrateAB5(FuncType f,double a,double b,int N){
+auto integrateAB5(FuncType f,double a,double b,int N){
 
 	double sum = 0.0;
 	double xi;
@@ -68,7 +68,7 @@ extern inline double integrateAB5(FuncType f,double a,double b,int N){
 }
 
 template <typename FuncType>	
-extern inline double integrateAB5P(FuncType f,double a,double b,int N){
+auto integrateAB5P(FuncType f,double a,double b,int N){
 
 	double sum = 0.0;
 	double xi;
@@ -87,7 +87,7 @@ extern inline double integrateAB5P(FuncType f,double a,double b,int N){
 }
 
 template <typename FuncType>
-extern inline double integrateLeftLogAB5(FuncType f,double a,double b,double eps,const int N){
+auto integrateLeftLogAB5(FuncType f,double a,double b,double eps,const int N){
 	const double L = b-a;
 	
 	const double T = pow(eps/(L+eps),1.0/N);
@@ -116,7 +116,7 @@ extern inline double integrateLeftLogAB5(FuncType f,double a,double b,double eps
 }	
 
 template <typename FuncType>
-extern inline double integrateRightLogAB5(FuncType f,double a,double b,double eps,const int N){
+auto integrateRightLogAB5(FuncType f,double a,double b,double eps,const int N){
 	const double L = b-a;
 	
 	const double T = pow(eps/(L+eps),1.0/N);
@@ -143,7 +143,7 @@ extern inline double integrateRightLogAB5(FuncType f,double a,double b,double ep
 }	
 
 template <typename T>
-extern inline double integrateAB2(std::vector<double> X,std::vector<T> F){
+auto integrateAB2(std::vector<double> X,std::vector<T> F){
 	T sum = 0;
 	int N = X.size();
 	for (int i = 0; i < N-1; i++){

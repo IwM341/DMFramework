@@ -1,7 +1,8 @@
 #ifndef GRID_FUNCTION_H
 #define GRID_FUNCTION_H
 
-#include <vectoroperators.hpp>
+#include "vectoroperators.hpp"
+#include "../debug/debugdef.hpp"
 #include <algorithm>
 #include <stdexcept>
 #include <iomanip>
@@ -16,15 +17,18 @@ class UniformFunction1{
 	double h;
 	std::vector<T> F;
 public:
-	friend std::ostream& operator<<(std::ostream& os, const UniformFunction1<T>& F){
+
+    friend std::ostream& operator <<(std::ostream& os, const UniformFunction1<T>& F){
 		size_t prec = os.precision();
 		os <<std::setprecision(17);
 		for (size_t i=0;i<F.F.size();i++) {
-			os << F.a + F.h*i << '\t' <<  F.F[i]<< std::endl;
+            os << F.a + F.h*i << '\t' <<  debugdefs::to_debug_string(F.F[i])<< std::endl;
 		}
 		os << std::setprecision(prec);
 		return os;
 	}
+
+
 	UniformFunction1(double _a = 0,double _b = 0,size_t _N = 0):a(_a),b(_b),N(_N),F(N){
 		if(a>b)
 			std::swap(a,b);
@@ -109,7 +113,7 @@ class UniformFunctionCubic1 : public UniformFunction1<T>{
 	}
 };
 */
-extern inline find_less(const std::vector<double> &X,double x){
+extern inline auto find_less(const std::vector<double> &X,double x){
 	size_t N = X.size();
 	size_t i1 = 0;
 	size_t i2 = N-1;
@@ -141,7 +145,7 @@ UniformFunction1<double> LoadUniformFunction1(const char *filename,bool isTitle 
 		xmax = x;
 		Y.push_back(y);
 	}
-	return UniformFunction1(xmin,xmax,Y);
+    return UniformFunction1<double>(xmin,xmax,Y);
 }
 
 template <class T>
@@ -154,7 +158,7 @@ class GridFunction1{
 		size_t prec = os.precision();
 		os <<std::setprecision(17);
 		for (size_t i=0;i<F.size();i++) {
-			os << F.X[i] << '\t' <<  F.Y[i]<< std::endl;
+            os << F.X[i] << '\t' <<  debugdefs::to_debug_string(F.Y[i])<< std::endl;
 		}
 		os << std::setprecision(prec);
 		return os;
@@ -250,7 +254,7 @@ std::vector<T> parse_string(const std::string &S){
 	return parsed;
 }
 
-extern inline std::map<std::string, std::vector<double>> CSVTable(const char * filename){
+extern inline std::map<std::string, std::vector<double>> CSVTable(const std::string & filename){
 	
 	std::map<std::string, std::vector<double>> Funcs;
 	

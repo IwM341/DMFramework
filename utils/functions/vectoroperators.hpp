@@ -5,20 +5,23 @@
 #include <type_traits>
 #include <utility>
 #include <iostream>
-
+#include <sstream>
 //PRINT VECTOR
+
+namespace std{
 template <class T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T>& V){
-	os << "Vector[ " ;
+std::string to_string(const std::vector<T>& V){
+    std::ostringstream os;
+    os << "Vector[ ";
 	for (size_t i=0;i<V.size();i++) {
 		if(i < V.size()-1)
-			os << V[i] << ", ";
+            os << V[i] << ", ";
 		else
-			os << V[i] << "]";
+            os << V[i] << "]";
     }
-	return os;
+    return os.str();
 }
-
+};
 //MAP FUNCTION ON VECTOR
 template <typename T,typename FuncType>
 inline auto vmap(FuncType F, std::vector<T> X){

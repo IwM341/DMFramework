@@ -70,14 +70,9 @@ public:
 		return sqrt(quad());
 	}
 	
-	inline std::string toString() const{
-		return std::string("vec3(") + std::to_string(x) + "," + 
-									std::to_string(y) + "," + 
-									std::to_string(z) + ")";
-	}
-	
 
 };
+
 
 vec3 inline operator *(double a,const vec3 &P){
 	return P*a; 
@@ -148,15 +143,23 @@ class vec4{
 		return t*t- x*x - y*y - z*z;
 	}
 	
-	inline  std::string toString() const{
-		return std::string("vec4(") + std::to_string(t) + "," +
-									std::to_string(x) + "," + 
-									std::to_string(y) + "," + 
-									std::to_string(z) + ")";
-	}
+
 	
 };
 
+namespace std{
+    inline std::string to_string(vec3 V) {
+        return std::string("vec3(") + std::to_string(V.x) + "," +
+                                    std::to_string(V.y) + "," +
+                                    std::to_string(V.z) + ")";
+    }
+    inline  std::string to_string(vec4 V) {
+        return std::string("vec4(") + std::to_string(V.t) + "," +
+                                    std::to_string(V.x) + "," +
+                                    std::to_string(V.y) + "," +
+                                    std::to_string(V.z) + ")";
+    }
+};
 
 inline vec4 operator *(double a,const vec4 &P){
 	return P*a; 
@@ -167,14 +170,5 @@ inline double E(double m,double p){
 }
 inline double P(double m,double E){
 	return sqrt(E*E - m*m);
-}
-
-inline std::ostream& operator<<(std::ostream& os, const vec3& x){
-	os << x.toString();
-	return os;
-}
-inline std::ostream& operator<<(std::ostream& os, const vec4& x){
-	os << x.toString();
-	return os;
 }
 #endif
