@@ -78,7 +78,7 @@ double IonFactor(double s,double phi, IonFactorDiff F = dphi){
     double delta = s-phi;
     double diff_fact = (F == dphi ? 2*phi : 1.0);
 
-    double exps = (phi <= 1e-6 ?
+    double exps = (phi <= 1e-3 ?
                        exp(-4/(1.0+s*s)) :
                        exp(-2*(atan(sum)-atan(delta))/phi)/
                                        (1.0-exp(-2*M_PI/phi)));
@@ -89,10 +89,10 @@ double IonFactor(double s,double phi, IonFactorDiff F = dphi){
 }
 
 double MigdalFactor(double s, int n){
-    return s*s/3*16*fast_pow(n,4)*fast_pow(1.0/(n*n-1.0),2)/sqrt(n*(n*n-1.0))*fast_pow((n-1.0)/(n+1.0),n);
+    return s*s/3*256*fast_pow(n,8)*fast_pow(1.0/(n*n-1.0),4)/(n*(n*n-1.0))*fast_pow((n-1.0)/(n+1.0),2*n);
 }
-double ElasticFactor(double s, int n){
-    return fast_pow(1+s*s/4,4);
+double ElasticFactor(double s){
+    return 1.0/fast_pow(1+s*s/4,4);
 }
 
 #endif

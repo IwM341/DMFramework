@@ -44,9 +44,9 @@ public:
 			double phi0 = BM.at("phi")[0];
 			double phi1 = BM.at("phi").back();
 			_VescMax = _VescMin*sqrt(phi0/phi1);
-			BM["Vesc"] = vmap([VescR=_VescMin,phi0](double x)->double
+            BM["Vesc"] = vmap([VescR=_VescMin,phi1](double x)->double
 							{
-								return sqrt(x/phi0)*VescR;
+                                return sqrt(x/phi1)*VescR;
 							}, BM.at("phi"));
 		}
 	}

@@ -30,7 +30,6 @@ template<typename GenType>
 auto MCIntegrate(GenType F,int N){
     double sum = 0;
     double sum2 = 0;
-    #pragma omp parallel for reduction(+:sum) reduction(+:sum2)
     for (size_t i=0;i<N;++i){
         auto f = F();
         sum += f;

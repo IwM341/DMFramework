@@ -285,5 +285,117 @@ extern inline std::map<std::string, std::vector<double>> CSVTable(const std::str
 	return Funcs;
 };
 
+template <class T = double>
+class AbstractGrid{
+public:
+    typedef T value_type;
+     size_t size()const =0;
+     T _a()const = 0;
+     T _b()const = 0;
+     size_t pos(T x) const = 0;
+     T at(size_t i) const = 0;
+};
+
+template <class T>
+class UniformGrid:public AbstractGrid<T>{
+    T a;
+    T b;
+    size_t N;
+    T h;
+public:
+    UniformGrid(T a =0,T b = 1,size_t N = 2):a(a),b(b),N(N){
+        h = (b-a)/(N-1);
+    }
+    size_t size()const {return N;}
+    T _a()const {return a;}
+    T _b()const {return b;}
+    T _h()const {return h;}
+
+    void set_a(T new_a){
+        a = new_a;
+        h = (b-a)/(N-1);
+    }
+    void set_b(T new_b){
+        b = new_b;
+        h = (b-a)/(N-1);
+    }
+    void set_ab(T new_a,T new_b){
+        a = new_a;
+        b = new_b;
+        h = (b-a)/(N-1);
+    }
+    void set_N(size_t new_N){
+        N = new_N;
+        h = (b-a)/(N-1);
+    }
+
+    size_t pos(T x) const{
+        return static_cast<size_t>( (x-a)/h );
+    }
+    T at(size_t i)const{
+        return a + h*i;
+    }
+};
+
+
+template <class T>
+class VectorGrid: public AbstractGrid<T>{
+
+    std::vector<T> Grid;
+    void warning(){
+        if(Grid.size() < 2)
+        std::cout << "warning: Grid.size < 2\n";
+    }
+public:
+    VectorGrid(T a =0,T b = 1,size_t N = 2):
+        Grid(Vector(N,[a,b,N](size_t i){return a + i*(b-a)/(N-1);}))
+    {
+        warning();
+    }
+    VectorGrid(std::vector<T> Grid):Grid(Grid){
+        warning();
+    }
+
+    template <typename U>
+    VectorGrid(const UniformGrid<U> &unG):Grid(
+                                              Vector(unG.size(),[a = unG._a(),b = unG._b(),N =  unG.size()](size_t i){return a + i*(b-a)/(N-1);})
+                                              ){}
+
+    size_t size()const {return Grid.size();}
+    T _a()const {return Grid[0];}
+    T _b()const {return Grid[Grid.size()-1];}
+
+
+    size_t pos(T x) const{
+        size_t i1 = 0;
+        size_t i2 = size()-1;
+        while(i1 +1 < i2){
+            size_t i = (i1 + i2)/2;
+            if(x < Grid[i]){
+                i2 = i;
+            }
+            else {
+                i1 = i;
+            }
+        }
+        return i1;
+    }
+    T at(size_t i)const{
+        return Grid[i];
+    }
+};
+
+template <int N>
+struct Interpolator{
+    double indicies[N];
+    double weights[N];
+};
+class LinearInterpolator{
+public:
+    template <typename GridType,typename T = GridType::value_type>
+    const Interpolator<2> operator()(GridType Grid,T x){
+
+    }
+};
 };
 #endif

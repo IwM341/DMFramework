@@ -31,6 +31,17 @@ namespace debugdefs{
 #define SVAR(x) (std::string(#x) + std::string(" = ") + debugdefs::to_debug_string(x))
 #define PVAR(x) std::cout << SVAR(x) <<std::endl
 
+template <typename T>
+void print(T data){
+    std::cout << data <<std::endl;
+}
+
+template <typename ...Args, typename T>
+void print(T data,Args...args){
+    std::cout << data << "\t";
+    print(args...);
+}
+
 
 
 #endif
