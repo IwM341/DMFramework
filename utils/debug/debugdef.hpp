@@ -38,10 +38,19 @@ void print(T data){
 
 template <typename ...Args, typename T>
 void print(T data,Args...args){
-    std::cout << data << "\t";
+    std::cout << data;
     print(args...);
 }
 
+template <typename Delimtype,typename T>
+void printd(Delimtype delim,T data){
+    std::cout << data <<std::endl;
+}
 
+template <typename Delimtype,typename ...Args, typename T>
+void printd(Delimtype delim,T data,Args...args){
+    std::cout << data << delim;
+    print(args...);
+}
 
 #endif

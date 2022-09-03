@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <fstream>
 #include <map>
+#include <initializer_list>
 
 namespace Function{
 template <class T>
@@ -289,11 +290,11 @@ template <class T = double>
 class AbstractGrid{
 public:
     typedef T value_type;
-     size_t size()const =0;
-     T _a()const = 0;
-     T _b()const = 0;
-     size_t pos(T x) const = 0;
-     T at(size_t i) const = 0;
+     size_t size()const;
+     T _a()const;
+     T _b()const;
+     size_t pos(T x) const;
+     T at(size_t i) const;
 };
 
 template <class T>
@@ -330,7 +331,13 @@ public:
     }
 
     size_t pos(T x) const{
-        return static_cast<size_t>( (x-a)/h );
+        int i = static_cast<int>( (x-a)/h );
+        if(i<0)
+            return 0;
+        else if(i>= N-1)
+            return N-2;
+        else
+            return i;
     }
     T at(size_t i)const{
         return a + h*i;
@@ -338,7 +345,7 @@ public:
 };
 
 
-template <class T>
+template <class T = double>
 class VectorGrid: public AbstractGrid<T>{
 
     std::vector<T> Grid;
@@ -385,17 +392,402 @@ public:
     }
 };
 
-template <int N>
-struct Interpolator{
-    double indicies[N];
+template <size_t N>
+struct Scheme{
+    size_t indicies[N];
     double weights[N];
-};
-class LinearInterpolator{
-public:
-    template <typename GridType,typename T = GridType::value_type>
-    const Interpolator<2> operator()(GridType Grid,T x){
 
+
+    constexpr static const size_t size = N;
+
+    friend std::ostream& operator <<(std::ostream& os, const Scheme<N>& Interpol){
+                size_t prec = os.precision();
+                os <<std::setprecision(17);
+                os<<"|";
+                for (size_t i=0;i<N;i++) {
+                    os << Interpol.weights[i]<<"|";
+                }
+                os << std::endl;
+                os<<"|";
+                for (size_t i=0;i<N;i++) {
+                    os << Interpol.indicies[i]<<"|";
+                }
+                os << std::endl;
+                os << std::setprecision(prec);
+                return os;
+        }
+};
+
+
+struct LinearInterpolator{
+template <typename T,template <typename> typename GridType>
+    static inline Scheme<2> interpolate(const GridType<T> &Grid,T x){
+        if(x<Grid._a())
+            return Scheme<2>({{0,0},{1,0}});
+        else if(x>Grid._b())
+            return Scheme<2>({{Grid.size()-1,Grid.size()-1},{1,0}});
+        else{
+            size_t i = Grid.pos(x);
+            T w = (x-Grid.at(i))/(Grid.at(i+1)-Grid.at(i));
+            return Scheme<2>({{i,i+1},{1-w,w}});
+        }
     }
 };
+struct LinearExtrapolator{
+template <typename T,template <typename> typename GridType>
+    static inline Scheme<2> interpolate(const GridType<T> &Grid,T x) {
+        size_t i = Grid.pos(x);
+        T w = (x-Grid.at(i))/(Grid.at(i+1)-Grid.at(i));
+        return Scheme<2>({{i,i+1},{1-w,w}});
+    }
+};
+
+
+struct CubicInterpolator{
+template <typename T,template <typename> typename GridType>
+    static inline Scheme<4> interpolate(const GridType<T> &Grid,T x) {
+        if(x<Grid._a())
+            return Scheme<4>({{0,0,0,0},{1,0,0,0}});
+        else if(x>Grid._b())
+            return Scheme<4>({{Grid.size()-1,0,0,0},{1,0,0,0}});
+        else{
+            size_t i = Grid.pos(x);
+            if(i==0) ++i;
+            if(i == Grid.size()-2) --i;
+
+
+            const T x0 = Grid.at(i-1);
+            const T x1 = Grid.at(i);
+            const T x2 = Grid.at(i+1);
+            const T x3 = Grid.at(i+2);
+
+            return Scheme<4>({{i-1,i,i+1,i+2},
+                              {(x-x3)*(x-x2)*(x-x1)/((-x1+x0)*(-x3+x0)*(-x2+x0)),
+                              -(x-x3)*(x-x2)*(x-x0)/((x1-x3)*(x1-x2)*(-x1+x0)),
+                              (x-x3)*(x-x1)*(x-x0)/((x1-x2)*(-x2+x0)*(x2-x3)),
+                              -(x-x2)*(x-x1)*(x-x0)/((x2-x3)*(x1-x3)*(-x3+x0))}});
+        }
+    }
+};
+
+template<typename V,typename GridType,typename InterpolatorType>
+struct __GridFunction1{
+    GridType Grid;
+    std::vector<V> values;
+
+    __GridFunction1(GridType Grid,std::vector<V> values):Grid(Grid),values(values){}
+    __GridFunction1(GridType Grid):Grid(Grid),values(Grid.size()){}
+
+    template<typename FuncType_T_V>
+    __GridFunction1(GridType Grid,FuncType_T_V F):Grid(Grid),values(Grid.size()){
+        for(size_t i =0;i< values.size();++i){
+            values[i] = F(Grid.at(i));
+        }
+    }
+
+    template<typename T>
+    V operator ()(T x)const{
+        auto Int = InterpolatorType::interpolate(Grid,x);
+        V sum = 0;
+        for(size_t j = 0;j< Int.size;++j){
+            sum += values[Int.indicies[j]]*Int.weights[j];
+        }
+        return sum;
+    }
+
+};
+
+
+
+/*GridObject*/
+template <typename V,typename GridType>
+struct GridObject{
+    GridType Grid;
+    std::vector<V> values;
+
+    GridObject(){}
+    GridObject(GridType Grid,std::vector<V> values):Grid(Grid),values(values){}
+    GridObject(GridType Grid,size_t N):Grid(Grid),values(N){}
+
+
+    #define make_increment_operator_function(op) template <typename T> \
+                        inline  GridObject & operator op(const T &val){\
+                            for(size_t i=0;i<values.size();++i)\
+                                values[i] op val;\
+                            return *this;\
+                        }
+
+    make_increment_operator_function(+=)
+    make_increment_operator_function(-=)
+    make_increment_operator_function(*=)
+    make_increment_operator_function(/=)
+
+#define make_operator_function(op)     template <typename T>\
+                                inline GridObject  operator op(const T &val){\
+                                    GridObject G(Grid,values.size());\
+                                    for(size_t i=0;i<values.size();++i)\
+                                        G.values[i] = values[i] op val;\
+                                    return G;\
+                                }
+
+    make_operator_function(+)
+    make_operator_function(-)
+    make_operator_function(*)
+    make_operator_function(/)
+
+
+    inline GridObject  operator -(){
+        GridObject G(Grid,values.size());
+        for(size_t i=0;i<values.size();++i)
+            G.values[i] = -values[i];
+        return G;
+    }
+    template <typename T>
+    friend inline GridObject operator +(const T &val,const GridObject& F){
+        return F + val;
+    }
+    template <typename T>
+    friend inline GridObject operator -(const T &val,const GridObject& F){
+        GridObject G(F.Grid, F.values.size());
+        for(size_t i=0;i<F.values.size();++i)
+            G.values[i] = val - F.values[i];
+        return G;
+    }
+    template <typename T>
+    friend inline GridObject operator *(const T &val,const GridObject& F){
+        return F * val;
+    }
+    template <typename T>
+    friend inline GridObject operator /(const T &val,const GridObject& F){
+        GridObject G(F.Grid, F.values.size());
+        for(size_t i=0;i<F.values.size();++i)
+            G.values[i] = val / F.values[i];
+        return G;
+    }
+
+#define make_operator_gridobject_function(op)     template <typename T>\
+                                inline GridObject  operator op(const GridObject<T,GridType> &Y){\
+                                    GridObject G(Grid,values.size());\
+                                    if(Y.Grid != Grid || Y.values.size()!= values.size()){\
+                                        throw std::invalid_argument("different GridObjects in operator");\
+                                    }\
+                                    else{\
+                                    for(size_t i=0;i<values.size();++i)\
+                                        G.values[i] = values[i] op Y.values[i];\
+                                    return G;\
+                                    }\
+                                }
+
+    make_operator_gridobject_function(+)
+    make_operator_gridobject_function(*)
+    make_operator_gridobject_function(/)
+    make_operator_gridobject_function(-)
+
+
+#define make_inc_operator_gridobject_function(op)     template <typename T>\
+                                inline GridObject & operator op(const GridObject<T,GridType> &Y){\
+                                    if(Y.Grid != Grid || Y.values.size()!= values.size()){\
+                                        throw std::invalid_argument("different GridObjects in operator");\
+                                    }\
+                                    else{\
+                                    for(size_t i=0;i<values.size();++i)\
+                                        values[i]  op Y.values[i];\
+                                    return *this;\
+                                    }\
+                                }
+
+    make_inc_operator_gridobject_function(*=)
+    make_inc_operator_gridobject_function(-=)
+    make_inc_operator_gridobject_function(+=)
+    make_inc_operator_gridobject_function(/=)
+};
+
+
+/*GridObject*/
+
+
+template <typename T,typename FuncType>
+struct FunctorM{
+    T x;
+    FuncType F;
+
+    FunctorM(T x,FuncType F):x(x),F(F){}
+    template <typename ...Args>
+    auto operator ()(Args...args){
+        return F(x,args...);
+    }
+
+
+};
+
+
+template <size_t N,typename V,typename GridType,typename InterpolatorType, typename ...Other>
+struct GridFunction;
+
+template <size_t N,typename V,typename GridType,typename InterpolatorType, typename ...Other>
+struct GridFunction: public GridObject<GridFunction<N-1,V,Other...>,GridType> {
+    typedef GridObject<GridFunction<N-1,V,Other...>,GridType> Base;
+
+    GridFunction(){}
+    GridFunction(GridType Grid,std::vector<GridFunction<N-1,V,Other...>> values):
+        Base(Grid,values){}
+    GridFunction(GridType Grid):
+        Base(Grid,Grid.size()){}
+    GridFunction(const Base & AbstractGridObject):Base(AbstractGridObject){}
+    GridFunction(Base && AbstractGridObject) noexcept:Base(std::move_if_noexcept(AbstractGridObject)){}
+
+    template<typename ...GridTypes>
+    GridFunction(GridType Grid,GridTypes...OtherGrids):Base(Grid,Grid.size()){
+        for(size_t i=0;i<this->values.size();++i){
+            this->values[i] = GridFunction<N-1,V,Other...>(OtherGrids...);
+        }
+    }
+
+    template <typename FuncType>
+    GridFunction(GridType Grid,FuncType F):Base(Grid,Grid.size()){
+        for(size_t i =0;i< this->values.size();++i){
+            this->values[i] = F(this->Grid.at(i));
+        }
+    }
+
+    template<typename T,typename ...OtherArgs>
+    V operator ()(T x,OtherArgs...args)const{
+        auto Int = InterpolatorType::interpolate(this->Grid,x);
+        V sum = 0;
+        for(size_t j = 0;j< Int.size;++j){
+            sum += this->values[Int.indicies[j]](args...)*Int.weights[j];
+        }
+        return sum;
+    }
+
+    template<typename FuncType>
+    inline void map(FuncType F){
+        for(size_t i=0;i<this->values.size();++i){
+            this->values[i].map(  FunctorM(this->Grid.at(i),F)  );
+        }
+    }
+
+    size_t num_of_element()const{
+        size_t summ = 0;
+        for(size_t i=0;i<this->values.size();++i){
+            summ += this->values.num_of_element();
+        }
+        return summ;
+    }
+
+    std::string gridStr(const std::string & prefix = "") const{
+        std::string ret;
+        for(size_t i=0;i<this->Grid.size();++i){
+            ret += this->values[i].gridStr    (prefix + this->Grid.at(i) + "\t");
+        }
+        return ret;
+    }
+
+};
+
+
+
+template <typename V,typename GridType,typename InterpolatorType>
+struct GridFunction<1, V, GridType, InterpolatorType> : public GridObject<V,GridType>{
+    typedef GridObject<V,GridType> Base;
+    InterpolatorType Interpolator;
+
+    GridFunction(){}
+    GridFunction(GridType Grid,std::vector<V> values):Base(Grid,values){}
+    GridFunction(GridType Grid):Base(Grid,Grid.size()){}
+
+    GridFunction(const Base & AbstractGridObject):Base(AbstractGridObject){}
+    GridFunction(Base && AbstractGridObject):Base(std::move_if_noexcept(AbstractGridObject)){}
+
+    template<typename FuncType_T_V>
+    GridFunction(GridType Grid,FuncType_T_V F):Base(Grid,Grid.size()){
+        for(size_t i =0;i< this->values.size();++i){
+            this->values[i] = F(this->Grid.at(i));
+        }
+    }
+
+
+    template<typename FuncType_T_V>
+    inline void map(FuncType_T_V f){
+        for(size_t i=0;i<this->values.size();++i){
+            this->values[i] = f(this->Grid.at(i));
+        }
+    }
+
+    template<typename T>
+    V operator ()(T x)const{
+        auto Int = InterpolatorType::interpolate(this->Grid,x);
+        V sum = 0;
+        for(size_t j = 0;j< Int.size;++j){
+            sum += this->values[Int.indicies[j]]*Int.weights[j];
+        }
+        return sum;
+    }
+
+    size_t num_of_element() const{
+        return this->values.size();
+    }
+    std::string gridStr(const std::string & prefix = ""){
+        std::string ret;
+        for(size_t i=0;i<this->Grid.size();++i){
+            ret += this->gridStr(prefix + this->Grid.at(i) + "\t");
+        }
+        return ret;
+    }
+
+};
+
+template <size_t N,typename V,typename GridType, typename ...Other>
+struct Histogramm{
+    typedef GridObject<Histogramm<N-1,V,Other...>,GridType> Base;
+
+    GridType Grid;
+    std::vector<Histogramm<N-1,V,Other...>> values;
+    Histogramm(GridType Grid,std::vector<Histogramm<N-1,V,Other...>> values):Grid(Grid),values(values){}
+    Histogramm(Base && AbstractGridObject):Base(std::move_if_noexcept(AbstractGridObject)){}
+
+    template <typename T,typename ...Args>
+    void putValue(V value,T x,Args...OtherPos){
+        if(x >= Grid._a() && x < x._b())
+            values[Grid.pos(x)].putValue(value,OtherPos...);
+    }
+
+    size_t num_of_element() const{
+        size_t summ = 0;
+        for(size_t i=0;i<this->values.size();++i){
+            summ += this->values.num_of_element();
+        }
+        return summ;
+    }
+
+};
+
+
+template <typename V,typename GridType>
+struct Histogramm<1,V,GridType>{
+
+    typedef GridObject<V,GridType> Base;
+
+    GridType Grid;
+    std::vector<V> values;
+    Histogramm(GridType Grid):Grid(Grid),values(Grid.size()-1,0){}
+    Histogramm(GridType Grid,std::vector<V> values):Grid(Grid),values(values){}
+    Histogramm(Base && AbstractGridObject):Base(std::move_if_noexcept(AbstractGridObject)){}
+
+
+    template <typename T>
+    void putValue(V value,T x){
+        if(x >= Grid._a() && x < x._b()){
+            values[Grid.pos(x)] += value;
+        }
+    }
+
+    size_t num_of_element() const{
+        return this->values.size();
+    }
+};
+
+
+
 };
 #endif
