@@ -37,9 +37,9 @@ class BodyModel{
 	
 	
 public:
-    BodyModel(double VescOnR,const std::string &LoadFileName):
+    BodyModel(double VescOnR,std::istream &LoadFile):
 	_VescMin(VescOnR),
-	BM(Function::CSVTable(LoadFileName)){
+    BM(Function::CSVTable(LoadFile)){
 		if(BM.find("Vesc") == BM.end()){
 			double phi0 = BM.at("phi")[0];
 			double phi1 = BM.at("phi").back();
