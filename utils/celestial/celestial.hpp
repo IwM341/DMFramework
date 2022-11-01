@@ -37,19 +37,37 @@ class BodyModel{
 	
 	
 public:
-    BodyModel(double VescOnR,std::istream &LoadFile):
-	_VescMin(VescOnR),
-    BM(Function::CSVTable(LoadFile)){
-		if(BM.find("Vesc") == BM.end()){
-			double phi0 = BM.at("phi")[0];
-			double phi1 = BM.at("phi").back();
-			_VescMax = _VescMin*sqrt(phi0/phi1);
+    BodyModel(double VescOnR, decltype(BM) && Table):_VescMin(VescOnR), BM(std::move(Table)){
+        if(BM.find("Vesc") == BM.end()){
+            double phi0 = BM.at("phi")[0];
+            double phi1 = BM.at("phi").back();
+            _VescMax = _VescMin*sqrt(phi0/phi1);
             BM["Vesc"] = vmap([VescR=_VescMin,phi1](double x)->double
-							{
+                            {
                                 return sqrt(x/phi1)*VescR;
-							}, BM.at("phi"));
-		}
-	}
+                            }, BM.at("phi"));
+        }
+    }
+
+    BodyModel(double VescOnR, const decltype(BM) & Table):_VescMin(VescOnR), BM(Table){
+        if(BM.find("Vesc") == BM.end()){
+            double phi0 = BM.at("phi")[0];
+            double phi1 = BM.at("phi").back();
+            _VescMax = _VescMin*sqrt(phi0/phi1);
+            BM["Vesc"] = vmap([VescR=_VescMin,phi1](double x)->double
+                            {
+                                return sqrt(x/phi1)*VescR;
+                            }, BM.at("phi"));
+        }
+    }
+    BodyModel(double VescOnR,std::istream &LoadFile):
+        BodyModel(VescOnR, Function::CSVTable(LoadFile)){}
+
+    template <typename FilenameType>
+    static BodyModel fromFile(double VescOnR,const FilenameType & filename){
+        std::ifstream ifs(filename);
+        return BodyModel(VescOnR,ifs);
+    }
 	const std::vector<double> &operator[](const std::string & column) const{
 		return BM.at(column);
 	}

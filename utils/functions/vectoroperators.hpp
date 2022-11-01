@@ -6,8 +6,22 @@
 #include <utility>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 //PRINT VECTOR
 
+struct empty_type{
+    template <typename T>
+    empty_type & operator = (const T &x){return *this;}
+};
+static empty_type _;
+
+#define _T std::make_tuple
+#define _R make_ref_typle
+
+template <typename...Args>
+auto make_ref_typle(Args&...args){
+    return std::tuple<Args&...>(args...);
+}
 
 
 namespace std{
@@ -24,6 +38,17 @@ std::ostream & operator << (std::ostream & os,const std::vector<T>& V){
     return os;
 }
 
+template <class T>
+auto vector_reverse(const std::vector<T> &X){
+    std::vector<T> Y = X;
+    std::reverse(Y.begin(),Y.end());
+    return Y;
+}
+template <class T>
+auto vector_reverse(std::vector<T> &&X){
+    std::reverse(X.begin(),X.end());
+    return X;
+}
 
 template <class T>
 std::string to_string(const std::vector<T>& V){
@@ -42,6 +67,27 @@ inline auto vmap(const FuncType &F, const std::vector<T> &X){
 	}
 	return Y;
 }
+
+
+template <typename T>
+T max(const std::vector<T> &X){
+    T tmp = X[0];
+    for(size_t i=1;i<X.size();++i){
+        if(tmp < X[i])
+            tmp = X[i];
+    }
+    return tmp;
+}
+template <typename T>
+T min(const std::vector<T> &X){
+    T tmp = X[0];
+    for(size_t i=1;i<X.size();++i){
+        if(tmp > X[i])
+            tmp = X[i];
+    }
+    return tmp;
+}
+
 
 template <typename IteratorType>
 inline size_t unique_values_sorted(IteratorType start,IteratorType end){
@@ -95,6 +141,8 @@ inline auto Vector(size_t N,const LambdaType &F){
 }
 
 
+
+
 //SUM VECTORS
 //vector + vector
 template <typename T1,typename T2>
@@ -125,7 +173,7 @@ inline auto operator + (const T1 & X,const std::vector<T2> & Y){
 //vector - vector
 template <typename T1,typename T2>
 inline auto operator - (const std::vector<T1> & X,const std::vector<T2> & Y){
-	std::vector<decltype(std::declval<T1>()-std::declval<T2>())> Z(X.size());
+    std::vector<std::remove_reference_t<decltype(std::declval<T1>()-std::declval<T2>())>> Z(X.size());
 	for(size_t i=0;i<X.size();i++)
 		Z[i] = X[i]-Y[i];
 	return Z;
@@ -133,7 +181,7 @@ inline auto operator - (const std::vector<T1> & X,const std::vector<T2> & Y){
 //vector - value
 template <typename T1,typename T2>
 inline auto operator - (const std::vector<T1> & X,const T2 & Y){
-	std::vector<decltype(std::declval<T1>()-std::declval<T2>())> Z(X.size());
+    std::vector<std::remove_reference_t<decltype(std::declval<T1>()-std::declval<T2>())>> Z(X.size());
 	for(size_t i=0;i<X.size();i++)
 		Z[i] = X[i]-Y;
 	return Z;
@@ -149,7 +197,7 @@ inline auto operator - (const T1 & X,const std::vector<T2> & Y){
 //- vector
 template <typename T>
 inline auto operator -(const std::vector<T> & Y){
-	std::vector<decltype(std::declval<T>())> Z(Y.size());
+    std::vector<T> Z(Y.size());
 	for(size_t i=0;i<Y.size();i++)
 		Z[i] = - Y[i];
 	return Z;
@@ -273,4 +321,29 @@ inline const auto & operator /= (std::vector<T1> & X,const T2 & Y){
 		X[i]/=Y;
 	return X;
 }
+
+template <typename IteratorType,typename T>
+void __fill__iterator(IteratorType start,const T &first){
+    *start = first;
+    ++start;
+}
+
+template <typename IteratorType,typename T,typename...Args>
+void __fill__iterator(IteratorType start,const T &first,const Args&...Other){
+    *start = first;
+    ++start;
+    __fill__iterator(start,Other...);
+}
+
+template <typename...Args>
+struct arg_count;
+
+template <typename T,typename...Args>
+struct arg_count<T,Args...>{
+  constexpr static size_t N = 1 + arg_count<Args...>::N;
+};
+template <>
+struct arg_count<>{
+  constexpr static size_t N = 0;
+};
 #endif

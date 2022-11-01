@@ -127,7 +127,8 @@ class UniformFunctionCubic1 : public UniformFunction1<T>{
 	}
 };
 */
-extern inline auto find_less(const std::vector<double> &X,double x){
+template <typename T>
+extern inline auto find_less(const std::vector<T> &X,T x){
 	size_t N = X.size();
 	size_t i1 = 0;
 	size_t i2 = N-1;
@@ -312,6 +313,7 @@ public:
      inline T operator [](const size_t i) const{
          return this->at(i);
      }
+
      bool operator ==(const AbstractGrid& OtherGrid) const;
 };
 
@@ -321,6 +323,17 @@ class UniformGrid:public AbstractGrid<T>{
     T b;
     size_t N;
     T h;
+
+    friend std::ostream & operator << (std::ostream & os,const UniformGrid & VG){
+        os << "UniformGrid[";
+        os << VG[0];
+        for(size_t i=1;i<VG.size();++i){
+            os << ",\t" <<VG[i];
+        }
+        os << "]";
+        return os;
+    }
+
 public:
     UniformGrid(T a =0,T b = 1,size_t N = 2):a(a),b(b),N(N){
         h = (b-a)/(N-1);
@@ -451,6 +464,17 @@ class VectorGrid: public AbstractGrid<T>{
         if(Grid.size() < 2)
         std::cout << "warning: Grid.size < 2\n";
     }
+
+    friend std::ostream & operator << (std::ostream & os,const VectorGrid & VG){
+        os << "VectorGrid[";
+        os << VG[0];
+        for(size_t i=1;i<VG.size();++i){
+            os << ",\t" <<VG[i];
+        }
+        os << "]";
+        return os;
+    }
+
 public:
     typedef typename std::vector<T>::iterator iterator;
     auto begin() const{return Grid.begin();}
@@ -459,7 +483,7 @@ public:
     typedef typename std::vector<T>::const_iterator const_iterator;
     auto cbegin() const{return Grid.cbegin();}
     auto cend() const{return Grid.cend();}
-
+    const std::vector<T> & grid(){return Grid;}
     VectorGrid(const T a =0,const T b = 1,size_t N = 2):
         Grid(Vector(N,[a,b,N](size_t i){return a + i*(b-a)/(N-1);}))
     {
@@ -592,7 +616,8 @@ template <typename T,template <typename> typename GridType>
         else if(x>Grid._b())
             return Scheme<1>({{0},{0}});
         else{
-            return SchemeClosest::interpolate(Grid,x);
+            size_t i = Grid.pos(x);
+            return Scheme<1>({{i},{1}});;
         }
     }
 };
@@ -678,6 +703,7 @@ struct is_template_base_of: is_template_base_of_helper<BaseType,T>::value_type{}
 
 template <typename V,typename GridType,typename DerivedType>
 struct GridObject{
+    typedef DerivedType Derived;
     GridType Grid;
     std::vector<V> values;
 
@@ -796,7 +822,7 @@ struct FunctorM{
 
     FunctorM(const T &x,const FuncType &F):x(x),F(F){}
     template <typename ...Args>
-    inline auto operator ()(Args...args){
+    inline auto operator () (Args...args)const{
         return F(x,args...);
     }
 };
@@ -823,7 +849,8 @@ struct GridFunction: public GridObject<GridFunction<V,Other...>,GridType,GridFun
         Base(Grid.size(),Grid){}
 
     GridFunction(const Base & AbstractGridObject):Base(AbstractGridObject){}
-    GridFunction(Base && AbstractGridObject) noexcept:Base(std::move(AbstractGridObject)){}
+    GridFunction(Base && AbstractGridObject):Base(std::move(AbstractGridObject)){}
+
 
     template<typename ...GridTypes>
     GridFunction(const GridType &Grid,const GridTypes&...OtherGrids):Base(Grid,Grid.size()){
@@ -839,10 +866,11 @@ struct GridFunction: public GridObject<GridFunction<V,Other...>,GridType,GridFun
         }
     }
 
-    static GridFunction sameGrid(const GridFunction & GFun){
+    template <typename T>
+    static GridFunction sameGrid(const GridFunction<T,GridType,InterpolatorType,Other...> & GFun){
         GridFunction ret(GFun.Grid);
         for(size_t i=0;i<ret.values.size();++i){
-            ret.values[i] = sameGrid(GFun.values[i]);
+            ret.values[i] =GridFunction<V,Other...>::sameGrid(GFun.values[i]);
         }
         return ret;
     }
@@ -851,8 +879,8 @@ struct GridFunction: public GridObject<GridFunction<V,Other...>,GridType,GridFun
     template<typename T,typename ...OtherArgs>
     V operator ()(T x,OtherArgs...args)const{
         auto Int = InterpolatorType::interpolate(this->Grid,x);
-        V sum = 0;
-        for(size_t j = 0;j< Int.size;++j){
+        V sum = this->values[Int.indicies[0]](args...)*Int.weights[0];
+        for(size_t j = 1;j< Int.size;++j){
             sum += this->values[Int.indicies[j]](args...)*Int.weights[j];
         }
         return sum;
@@ -882,9 +910,9 @@ struct GridFunction: public GridObject<GridFunction<V,Other...>,GridType,GridFun
     }
 
     template<typename FuncType>
-    inline void map(FuncType F){
+    inline void map(const FuncType &F){
         for(size_t i=0;i<this->values.size();++i){
-            this->values[i].map(  FunctorM(this->Grid.at(i),F)  );
+            this->values[i].map( FunctorM(this->Grid.at(i),F)  );
         }
     }
 
@@ -899,7 +927,7 @@ struct GridFunction: public GridObject<GridFunction<V,Other...>,GridType,GridFun
     std::string gridStr(const std::string & prefix = "") const{
         std::string ret;
         for(size_t i=0;i<this->Grid.size();++i){
-            ret += this->values[i].gridStr(prefix + std::to_string(this->Grid.at(i)) + "\t");
+            ret += this->values[i].gridStr(prefix + std::to_string(this->Grid.at(i)) + "\t")+'\n';
         }
         return ret;
     }
@@ -907,8 +935,10 @@ struct GridFunction: public GridObject<GridFunction<V,Other...>,GridType,GridFun
     std::string toString(const std::string & prefix = "") const{
         std::string ret;
         for(size_t i=0;i<this->Grid.size();++i){
-            ret += this->values[i].toString(prefix + std::to_string(this->Grid.at(i)) + "\t");
+
+            ret += this->values[i].toString(prefix + std::to_string(this->Grid.at(i)) + "\t")+'\n';
         }
+
         return ret;
     }
 
@@ -1055,8 +1085,9 @@ struct GridFunction<V, GridType, InterpolatorType> : public GridObject<V,GridTyp
         }
     }
 
-    static GridFunction sameGrid(const GridFunction & GFun){
-        return ret(GFun.Grid);
+    template <typename T>
+    static GridFunction sameGrid(const GridFunction<T,GridType,InterpolatorType> & GFun){
+        return GridFunction(GFun.Grid);
     }
 
     const V &operator[](size_t i) const{
@@ -1073,11 +1104,10 @@ struct GridFunction<V, GridType, InterpolatorType> : public GridObject<V,GridTyp
         }
     }
 
-    template<typename T>
-    V operator ()(T x)const{
+    V operator ()(typename GridType::value_type x)const{
         auto Int = InterpolatorType::interpolate(this->Grid,x);
-        V sum = 0;
-        for(size_t j = 0;j< Int.size;++j){
+        V sum = this->values[Int.indicies[0]]*Int.weights[0];
+        for(size_t j = 1;j< Int.size;++j){
             sum += this->values[Int.indicies[j]]*Int.weights[j];
         }
         return sum;
@@ -1095,11 +1125,11 @@ struct GridFunction<V, GridType, InterpolatorType> : public GridObject<V,GridTyp
     }
 
     std::string toString(const std::string & prefix = "") const{
-        std::string ret;
+        std::stringstream ret;
         for(size_t i=0;i<this->Grid.size();++i){
-            ret += prefix + std::to_string(this->Grid.at(i))  +'\t' + std::to_string(this->values[i]) + '\n';
+            ret << prefix << this->Grid.at(i) << '\t' <<  this->values[i] << '\n';
         }
-        return ret;
+        return ret.str();
     }
 
     template <typename IteratorType>
@@ -1308,6 +1338,15 @@ template <typename V,typename GridType, typename ...Other>
 using FuncHistoType = typename HelperType<BindTemplateLeft<GridFunction,V>::template ResultType,GridType,Other...>::ResultType;
 
 
+template <typename T>
+UniformGrid<T> ApplyRange(const UniformGrid<T> & grid,size_t i0,size_t i1){
+    return UniformGrid<T>(grid[i0],grid[i1],i1-i0);
+}
+template <typename T>
+VectorGrid<T> ApplyRange(const VectorGrid<T> & grid,size_t i0,size_t i1){
+    return VectorGrid<T>(std::vector<T>(grid.begin() + i0,grid.begin() + i1));
+}
+
 template <typename V,typename GridType, typename ...Other>
 struct Histogramm : public GridObject<Histogramm<V,Other...>,GridType,Histogramm<V,GridType,Other...>>{
     typedef GridObject<Histogramm<V,Other...>,GridType,Histogramm<V,GridType,Other...>> Base;
@@ -1328,25 +1367,46 @@ struct Histogramm : public GridObject<Histogramm<V,Other...>,GridType,Histogramm
     Histogramm(const Base &AbstractGridObject):Base(AbstractGridObject){}
     Histogramm(Base && AbstractGridObject):Base(std::move(AbstractGridObject)){}
 
+    template<typename FuncType>
+    inline void map(const FuncType &F){
+        for(size_t i=0;i<this->values.size();++i){
+            this->values[i].map( FunctorM(0.5*(this->Grid.at(i)+this->Grid.at(i+1)),F)  );
+        }
+    }
 
-    static Histogramm sameGrid(const Histogramm & Hist){
+    template <typename T,typename...Other1>
+    static Histogramm sameGrid(const Histogramm<T,GridType,Other1...> & Hist){
         Histogramm ret(Hist.Grid);
         for(size_t i=0;i<ret.values.size();++i){
-            ret.values[i] = sameGrid(Hist.values[i]);
+            ret.values[i] = Histogramm<V,Other...>::sameGrid(Hist.values[i]);
+        }
+        return ret;
+    }
+    template <typename T,typename Interpol,typename...Other1>
+    static Histogramm sameGrid(const GridFunction<T,GridType,Interpol,Other1...> & Func){
+        Histogramm ret(ApplyRange(Func.Grid,0,Func.Grid.size()-1));
+        for(size_t i=0;i<ret.values.size();++i){
+            ret.values[i] = Histogramm<V,Other...>::sameGrid(Func.values[i]);
         }
         return ret;
     }
 
     auto toFunction() const{
-        return GridFunctionCreator2<SchemeHisto>::Create(diffGrid1(Base::Grid),Vector(Base::values.size(),[&](size_t i){
+        return GridFunctionCreator2<SchemeHisto>::Create(Base::Grid,Vector(Base::values.size() + 1,[&](size_t i){
+                                                            if(i!=Base::values.size())
                                                              return Base::values[i].toFunction()/(Base::Grid[i+1]-Base::Grid[i]);
+                                                            else
+                                                                return (Base::values[i-1].toFunction()*=0);
                                                          }));
     }
 
+
+
     template <typename T,typename ...Args>
-    void putValue(V value,T x,Args...OtherPos){
+    bool putValue(V value,T x,Args...OtherPos){
         if(x >= Base::Grid._a() && x <Base::Grid._b())
-            Base::values[Base::Grid.pos(x)].putValue(value,OtherPos...);
+            return Base::values[Base::Grid.pos(x)].putValue(value,OtherPos...);
+        return false;
     }
 
     size_t num_of_element() const{
@@ -1450,6 +1510,27 @@ struct Histogramm : public GridObject<Histogramm<V,Other...>,GridType,Histogramm
         return const_value_iterator((decltype (value_iterator::it))Base::values.back(),Base::values.back()->end());
     }
 
+
+    std::string gridStr(const std::string & prefix = "") const{
+        std::string ret;
+        for(size_t i=0;i<this->values.size();++i){
+            ret += this->values[i].gridStr(prefix +
+                                           std::to_string(this->Grid.at(i))+"-"+
+                                           std::to_string(this->Grid.at(i+1)) + "\t")+'\n';
+        }
+        return ret;
+    }
+
+    std::string toString(const std::string & prefix = "") const{
+        std::string ret;
+        for(size_t i=0;i<this->values.size();++i){
+            ret += this->values[i].toString(prefix +
+                                            std::to_string(this->Grid.at(i))+"-"+
+                                            std::to_string(this->Grid.at(i+1))  + "\t")+'\n';
+        }
+        return ret;
+    }
+
 };
 
 
@@ -1470,7 +1551,7 @@ struct Histogramm<V,GridType>: GridObject<V,GridType,Histogramm<V,GridType>>{
     }
     Histogramm(GridType &&Grid):Base(Grid.size()-1,std::move(Grid)){
         for(size_t i=0;i<Base::values.size();++i){
-            Base::values[i] = 0;
+            Base::values[i] = V(0);
         }
 
     }
@@ -1478,14 +1559,30 @@ struct Histogramm<V,GridType>: GridObject<V,GridType,Histogramm<V,GridType>>{
     Histogramm(const Base &AbstractGridObject):Base(AbstractGridObject){}
     Histogramm(Base && AbstractGridObject):Base(std::move(AbstractGridObject)){}
 
-    static Histogramm sameGrid(const Histogramm & Hist){
+    template <typename T>
+    static Histogramm sameGrid(const Histogramm<T,GridType> & Hist){
         return Histogramm(Hist.Grid);
     }
 
+    template <typename T,typename...Other1>
+    static Histogramm sameGrid(const GridFunction<T,Other1...> & Func){
+        Histogramm ret(ApplyRange(Func.Grid,0,Func.Grid.size()-1));
+        return ret;
+    }
+
     template <typename T>
-    void putValue(V value,T x){
+    bool putValue(V value,T x){
         if(x >= Base::Grid._a() && x < Base::Grid._b()){
             Base::values[Base::Grid.pos(x)] += value;
+            return true;
+        }
+        return false;
+    }
+
+    template<typename FuncType_T_V>
+    inline void map(const FuncType_T_V &f){
+        for(size_t i=0;i<this->values.size();++i){
+            this->values[i] = f(0.5*(this->Grid.at(i)+this->Grid.at(i+1)));
         }
     }
 
@@ -1525,9 +1622,29 @@ struct Histogramm<V,GridType>: GridObject<V,GridType,Histogramm<V,GridType>>{
     }
 
     auto toFunction() const{
-        return GridFunction<V,GridType,SchemeHisto>(diffGrid1(Base::Grid),Vector(Base::values.size(),[&](size_t i){
-                                                                return Base::values[i]/(Base::Grid.at(i+1)-Base::Grid.at(i));
+        return GridFunction<V,GridType,SchemeHisto>(Base::Grid,Vector(Base::values.size() + 1,[&](size_t i){
+                                                                if( i<Base::values.size())
+                                                                    return Base::values[i]/(Base::Grid.at(i+1)-Base::Grid.at(i));
+                                                                else
+                                                        return V(0);
                                                             }));
+    }
+    std::string gridStr(const std::string & prefix = "") const{
+        std::string ret;
+        for(size_t i=0;i<this->values.size();++i){
+            ret += prefix + std::to_string(this->Grid.at(i))+"-"+std::to_string(this->Grid.at(i+1)) + '\n';
+        }
+        return ret;
+    }
+
+    std::string toString(const std::string & prefix = "") const{
+        std::string ret;
+        for(size_t i=0;i<this->values.size();++i){
+            ret += prefix + std::to_string(this->Grid.at(i))+"-"+
+                    std::to_string(this->Grid.at(i+1))  +'\t' +
+                    std::to_string(this->values[i]) + '\n';
+        }
+        return ret;
     }
 };
 

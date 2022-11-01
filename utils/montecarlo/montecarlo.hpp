@@ -9,6 +9,7 @@ struct MCResult{
 	T Result;
 	double RemainDensity;
 	MCResult(T Result,double RemainDensity):Result(Result),RemainDensity(RemainDensity){}
+    MCResult():RemainDensity(0){}
 };
 
 

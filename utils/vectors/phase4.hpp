@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <string>
+#include <ostream>
 class vec3{
 public:
 	double x,y,z;
@@ -69,8 +70,12 @@ public:
 	inline double norm() const{
 		return sqrt(quad());
 	}
-	
 
+    friend std::ostream & operator << (std::ostream & os,const vec3 & V){
+        os << "vec3( " << V.x << ", " << V.y << ", " << V.z << ")";
+        return os;
+    }
+	
 };
 
 
@@ -143,9 +148,13 @@ class vec4{
 		return t*t- x*x - y*y - z*z;
 	}
 	
-
+    friend std::ostream & operator << (std::ostream & os,const vec4 & V){
+        os << "vec4( " << V.t << ", " << V.x << ", " << V.y << ", " << V.z << ")";
+        return os;
+    }
 	
 };
+
 
 namespace std{
     inline std::string to_string(vec3 V) {
