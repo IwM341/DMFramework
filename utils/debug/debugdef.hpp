@@ -43,6 +43,24 @@ namespace debugdefs{
 #define PDEL() (std::cout << "-----------------------------------------------" <<std::endl)
 #define SCOMPARE(x,y) (SVAR(x) + " vs " + SVAR(y))
 #define COMPARE(x,y) std::cout << SCOMPARE(x,y) <<std::endl;
+
+template <typename T>
+std::string TypeString(){
+    std::string fname = __PRETTY_FUNCTION__ ;
+    return fname.substr(35,fname.size()-84);
+}
+#define TypeToString(type) TypeString<type>()
+
+template <typename EnumClass>
+struct EnNameStr{
+	template <EnumClass em>
+	static std::string _str(){
+		std::string enum_name = __PRETTY_FUNCTION__ ;
+		return  enum_name.substr(69,enum_name.size()-135);
+	}
+};
+#define ValueToString(V) EnNameStr<decltype(V)>::_str<V>()
+
 void print(){
     std::cout <<std::endl;
 }
@@ -65,7 +83,7 @@ void printd(Delimtype delim,T data){
 template <typename Delimtype,typename ...Args, typename T>
 void printd(Delimtype delim,T data,Args...args){
     std::cout << data << delim;
-    print(args...);
+    printd(delim,args...);
 }
 
 
@@ -352,6 +370,100 @@ struct pipe_menu{
         block_exit = 0;
     }
 };
+
+void show_progress(double progress,const std::string&prefix = "",const std::string&postfix = "",int barWidth = 100){
+    int pos = progress*barWidth;
+    std::cout.flush();
+    std::cout << prefix << "[";
+    for (int j = 0; j < barWidth; ++j) {
+        if (j < pos) std::cout << "=";
+        else if (j == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << int(progress * 100.0) << " %" << postfix << "\r";
+}
+
+template <typename RoutineType>
+void show_for_progress(size_t N,const RoutineType & Routine,int barWidth = 70,
+                       const std::string&prefix = "",const std::string&postfix = ""){
+    int pos = -1;
+    show_progress(0.0,prefix,postfix,barWidth);
+    for(size_t i =0;i<N;++i){
+        Routine(i);
+        double progress = double(i+1)/N;
+        int n_pos = barWidth * progress;
+        if(n_pos != pos){
+            pos = n_pos;
+            show_progress(progress,prefix,postfix,barWidth);
+        }
+    }
+    std::cout << std::endl;
+}
+
+template <typename RoutineType,typename FuncType_M>
+void show_for_progress(size_t N,const FuncType_M &M_Func,const RoutineType & Routine,
+                       int barWidth = 70,const std::string&prefix = "",const std::string&postfix = ""){
+    int pos = 0;
+    show_progress(0,prefix,postfix,barWidth);
+    size_t task_size = 0;
+    for(size_t i=0;i<N;++i){
+        task_size += M_Func(i);
+    }
+    size_t item = 0;
+    for(size_t i =0;i<N;++i){
+        size_t M = M_Func(i);
+        for(size_t j =0;j<M;++j){
+            Routine(i,j);
+            ++item;
+            double progress = (item)/((double)task_size);
+            int n_pos = barWidth * progress;
+            if(n_pos != pos){
+                pos = n_pos;
+                show_progress(progress,prefix,postfix,barWidth);
+            }
+
+        }
+    }
+    std::cout << std::endl;
+}
+
+class show_prog{
+    const std::string&prefix;
+    const std::string&postfix;
+    int barWidth;
+    int _pos;
+    show_prog(int barWidth = 100,const std::string&prefix = "",
+              const std::string&postfix = ""):
+        barWidth(barWidth),prefix(prefix),postfix(postfix){
+        _pos = 0;
+    }
+private:
+    void _show(int pos,float progress){
+        std::cout.flush();
+        std::cout << prefix << "[";
+        for (int j = 0; j < barWidth; ++j) {
+            if (j < pos) std::cout << "=";
+            else if (j == pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << int(progress * 100.0) << " %" << postfix << "\r";;
+    }
+public:
+    void show(float progress){
+        int pos = progress*barWidth+0.1;
+        if(pos > _pos){
+            _pos = pos;
+            _show(pos,progress);
+        }
+    }
+    ~show_prog(){
+        std::cout << std::endl;
+    }
+};
+
+void wait(){
+    std::cin.get();
+}
 
 #define debug_return(expr) PVAR((expr)); return expr;
 

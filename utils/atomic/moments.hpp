@@ -95,4 +95,96 @@ double ElasticFactor(double s){
     return 1.0/fast_pow(1+s*s/4,4);
 }
 
+
+const double _me = 0.52e-3;
+const double _mp = 0.938;
+const double _alpha = 0.0073;
+
+enum ScatteringType{
+    ELASTIC,IONIZATION,MIGDAL
+};
+enum Target{
+    ELECTRON,PROTON
+};
+
+template <ScatteringType ST,Target T,typename GenType = void>
+struct dF_H{
+    MC::MCResult<double> EnergyLoss(double Emax);
+    double ScatterFactor(double q);
+};
+
+template <Target T,typename GenType>
+struct dF_H<MIGDAL,T,GenType>{
+    struct atomic_state{
+        size_t nMgd;
+        double Emgd;
+
+        atomic_state():atomic_state(1){}
+        atomic_state(size_t nMgd):nMgd(nMgd),Emgd(deltaEMgd(nMgd)){}
+        operator double() const{
+            return Emgd;
+        }
+    };
+    GenType &G;
+    MC::MCResult<atomic_state> EnergyLoss(double Emax){
+        double dnMx = nMax(Emax)-2;
+        if(dnMx > 0){
+            double nMigdal = 2 + G()*(int)(dnMx+1);
+            //deltaE = deltaEMgd(nMigdal);
+            return atomic_state(nMigdal,dnMx+1);
+        }
+        else{
+           return 0;
+        }
+    }
+    double ScatterFactor(double q,atomic_state S);
+};
+
+template<Target T,typename GenType>
+double dF_H<MIGDAL,T,GenType>::ScatterFactor(double q,atomic_state S){
+
+    double s = q/(_alpha*(T == PROTON ? _mp : _me));
+    return MigdalFactor(s,S.nMgd);
+}
+
+template <Target T>
+struct dF_H<ELASTIC,T,void>{
+    MC::MCResult<double> EnergyLoss(double Emax){
+        return MC::MCResult<double>(0.0,1);
+    }
+    double ScatterFactor(double q,double EnLoss);
+};
+
+template<Target T>
+double dF_H<ELASTIC,T,void>::ScatterFactor(double q,double enLoss){
+    double s = q/(_alpha*(T == PROTON ? _mp : _me));
+    return ElasticFactor(s);
+}
+
+
+template <Target T,typename GenType>
+struct dF_H<IONIZATION,T,GenType>{
+    GenType &G;
+    dF_H(GenType &G):G(G){}
+    MC::MCResult<double> EnergyLoss(double Emax){
+        if(Emax > Rd){
+            //dE = max energy loss by ionization - min energyloss od ionization
+            double dE = Emax-Rd;
+            return MC::MCResult<double>(Rd + G()*dE,dE/Rd);
+        }
+        else{
+            MC::MCResult<double>(0,0);
+        }
+    }
+    double ScatterFactor(double q,double EnLoss);
+};
+
+template<Target T,typename GenType>
+double dF_H<IONIZATION,T,GenType>::ScatterFactor(double q,double EnLoss){
+    double s = q/(_alpha*(T == PROTON ? _mp : _me));
+    if(EnLoss > Rd)
+        return IonFactor(s,phiMax(EnLoss),dE_Rd);
+    else return 0.0;
+}
+
 #endif

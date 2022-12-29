@@ -23,6 +23,14 @@ auto make_ref_typle(Args&...args){
     return std::tuple<Args&...>(args...);
 }
 
+template <typename V>
+inline auto iterator_last(V & list){
+    return list.begin() + (list.size()-1);
+}
+template <typename V>
+inline auto const_iterator_last(const V & list){
+    return list.cbegin() + (list.size()-1);
+}
 
 namespace std{
 
@@ -125,9 +133,11 @@ inline size_t unique_values_unsorted(const std::vector<T> & V){
 */
 template <typename T>
 inline T vector_sum(const std::vector<T> & V){
-    T summ = 0;
-    for(auto it : V)
-        summ += it;
+    if(!V.size())
+        return 0;
+    T summ = V[0];
+    for(size_t i=1;i<V.size();++i)
+        summ += V[i];
     return summ;
 }
 //CREATE VECTOR FROM LAMBDA

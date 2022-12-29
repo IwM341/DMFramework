@@ -8,7 +8,7 @@ template <typename T>
 struct MCResult{
 	T Result;
 	double RemainDensity;
-	MCResult(T Result,double RemainDensity):Result(Result),RemainDensity(RemainDensity){}
+    MCResult(T Result,double RemainDensity = 1.0):Result(Result),RemainDensity(RemainDensity){}
     MCResult():RemainDensity(0){}
 };
 
