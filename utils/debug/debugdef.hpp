@@ -127,6 +127,7 @@ class tostream: public std::ofstream{
 std::string make_path(const std::string & str){
 	return std::string("\"") + std::regex_replace(str, std::regex("\\\\"), "\\\\") + "\"";
 }
+
 struct Gnuplot{
 	struct PlotData{
 		std::string data; // filename or function string
@@ -139,7 +140,7 @@ struct Gnuplot{
     std::string show_cmd;
 	FILE *gp;
 	public:
-	Gnuplot(const std::string & path = "D:\\Soft\\gnuplot\\gnuplot\\bin\\gnuplot"){
+    Gnuplot(const std::string & path = "gnuplot"){
 		gp = popen(path.c_str(),"w");
 		if (!gp) { perror("popen gnuplot"); exit(EXIT_FAILURE); };
         show_cmd = "plot";
@@ -432,6 +433,7 @@ class show_prog{
     const std::string&postfix;
     int barWidth;
     int _pos;
+public:
     show_prog(int barWidth = 100,const std::string&prefix = "",
               const std::string&postfix = ""):
         barWidth(barWidth),prefix(prefix),postfix(postfix){
@@ -456,8 +458,11 @@ public:
             _show(pos,progress);
         }
     }
-    ~show_prog(){
+    void end(){
         std::cout << std::endl;
+    }
+    ~show_prog(){
+        end();
     }
 };
 

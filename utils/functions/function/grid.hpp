@@ -34,6 +34,9 @@ public:
 };
 
 template <class T>
+class VectorGrid;
+
+template <class T>
 class UniformGrid:public AbstractGrid<T>{
     T a;
     T b;
@@ -52,6 +55,11 @@ class UniformGrid:public AbstractGrid<T>{
 
 public:
     UniformGrid(T a =0,T b = 1,size_t N = 2):a(a),b(b),N(N){
+        h = (N>1 ? (b-a)/(N-1) : 0);
+    }
+
+    template <typename U = T>
+    UniformGrid(const VectorGrid<U> & VG):a(VG._a()),b(VG._b()),N(VG.size()){
         h = (N>1 ? (b-a)/(N-1) : 0);
     }
 

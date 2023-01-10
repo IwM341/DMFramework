@@ -11,10 +11,8 @@
 #include <initializer_list>
 #include <type_traits>
 
-#include "grid.hpp"
 #include "grid_object.hpp"
-#include "scheme.hpp"
-#include "templates.hpp"
+
 
 namespace Function {
 
@@ -25,7 +23,7 @@ struct FunctorM{
 
     FunctorM(const T &x,const FuncType &F):x(x),F(F){}
     template <typename ...Args>
-    inline auto operator () (Args...args)const{
+    inline auto operator () (Args&&...args)const{
         return F(x,args...);
     }
 };

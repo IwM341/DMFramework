@@ -110,7 +110,7 @@ enum Target{
 template <ScatteringType ST,Target T,typename GenType = void>
 struct dF_H{
     MC::MCResult<double> EnergyLoss(double Emax);
-    double ScatterFactor(double q);
+    double ScatterFactor(double q,double enLoss);
 };
 
 template <Target T,typename GenType>
