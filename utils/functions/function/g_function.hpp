@@ -108,7 +108,9 @@ struct GridFunction: public GridObject<GridFunction<V,Other...>,GridType,GridFun
         }
     }
 
-    template <typename FuncType>
+    template <typename FuncType,typename=
+              typename std::enable_if<!is_template_base_of<AbstractGrid,FuncType>::value>::type
+              >
     GridFunction(const GridType &Grid,const FuncType &F):Base(Grid,Grid.size()){
         for(size_t i =0;i< this->values.size();++i){
             this->values[i] = F(this->Grid.at(i));
@@ -309,7 +311,7 @@ struct GridFunction<V, GridType, InterpolatorType> : public GridObject<V,GridTyp
     GridFunction(const Base & AbstractGridObject):Base(AbstractGridObject){}
     GridFunction(Base && AbstractGridObject):Base(std::move(AbstractGridObject)){}
 
-    template<typename FuncType_T_V>
+    template<typename FuncType_T_V,typename = typename std::enable_if<!std::is_same<std::vector<V>,FuncType_T_V>::value>::type>
     GridFunction(const GridType &Grid,const FuncType_T_V &F):
         Base(Grid,Grid.size()){
         for(size_t i =0;i< this->values.size();++i){

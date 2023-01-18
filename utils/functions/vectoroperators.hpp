@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <cmath>
 //PRINT VECTOR
 
 struct empty_type{
@@ -44,6 +45,16 @@ std::ostream & operator << (std::ostream & os,const std::vector<T>& V){
             os << V[i] << "]";
     }
     return os;
+}
+
+template <typename Container>
+bool contains_nan(const Container&C){
+    for(const auto & val : C){
+        if(std::isnan(val)){
+            return true;
+        }
+    }
+    return false;
 }
 
 template <class T>

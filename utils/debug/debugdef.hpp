@@ -13,7 +13,7 @@
 #include <set>
 #include <regex>
 #include "functions/vectoroperators.hpp"
-
+#include <mutex>
 template <typename U,typename V>
 std::ostream & operator << (std::ostream & os, const std::pair<U,V> & P){
     os << "pair(" << P.first << ", " << P.second << ")";
@@ -128,6 +128,9 @@ std::string make_path(const std::string & str){
 	return std::string("\"") + std::regex_replace(str, std::regex("\\\\"), "\\\\") + "\"";
 }
 
+#ifndef GNUPLOT_PATH
+#define GNUPLOT_PATH "gnuplot"
+#endif
 struct Gnuplot{
 	struct PlotData{
 		std::string data; // filename or function string
@@ -140,7 +143,7 @@ struct Gnuplot{
     std::string show_cmd;
 	FILE *gp;
 	public:
-    Gnuplot(const std::string & path = "gnuplot"){
+    Gnuplot(const std::string & path = GNUPLOT_PATH){
 		gp = popen(path.c_str(),"w");
 		if (!gp) { perror("popen gnuplot"); exit(EXIT_FAILURE); };
         show_cmd = "plot";
@@ -332,13 +335,13 @@ struct pipe_menu{
     std::list<action> action_list;
     std::function<void(void)> dialog_action;
     pipe_menu():block_exit(1),dialog_action([](){}){
-        add_action("exit",this,&pipe_menu::exit,"exit");
-        add_action("quit",this,&pipe_menu::exit,"quit");
+        add_action(action("exit",this,&pipe_menu::exit,"exit"));
+        add_action(action("quit",this,&pipe_menu::exit,"quit"));
     }
 
     template <typename...Args>
-    void add_action(const Args...args){
-        action_list.push_back(action(args...));
+    void add_action(action act){
+        action_list.push_back(act);
     }
 
     template <typename FuncType>
@@ -431,6 +434,7 @@ void show_for_progress(size_t N,const FuncType_M &M_Func,const RoutineType & Rou
 class show_prog{
     const std::string&prefix;
     const std::string&postfix;
+    std::mutex m;
     int barWidth;
     int _pos;
 public:
@@ -452,11 +456,13 @@ private:
     }
 public:
     void show(float progress){
+        m.lock();
         int pos = progress*barWidth+0.1;
         if(pos > _pos){
             _pos = pos;
             _show(pos,progress);
         }
+        m.unlock();
     }
     void end(){
         std::cout << std::endl;

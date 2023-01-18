@@ -70,7 +70,8 @@ struct GridObject{
     make_inc_operator_gridobject_function(/=)
 
 
-    #define make_increment_operator_function(op) inline  DerivedType & operator op(const V &val){\
+    #define make_increment_operator_function(op) template <typename MultType>\
+                        inline  DerivedType & operator op(const MultType &val){\
                             for(size_t i=0;i<values.size();++i)\
                                 values[i] op val;\
                             return *static_cast<DerivedType*>(this);\
@@ -81,7 +82,8 @@ struct GridObject{
     make_increment_operator_function(*=)
     make_increment_operator_function(/=)
 
-    #define make_operator_function(op)     inline DerivedType  operator op(const V &val){\
+    #define make_operator_function(op)     template <typename MultType>\
+                                inline DerivedType  operator op(const MultType &val) const{\
                                     GridObject G(Grid,values.size());\
                                     for(size_t i=0;i<values.size();++i)\
                                         G.values[i] = values[i] op val;\
@@ -94,28 +96,32 @@ struct GridObject{
     make_operator_function(/)
 
 
-    inline DerivedType  operator -(){
+    inline DerivedType  operator -()const{
         GridObject G(Grid,values.size());
         for(size_t i=0;i<values.size();++i)
             G.values[i] = -values[i];
         return G;
     }
 
-    friend inline DerivedType operator +(const V &val,const DerivedType& F){
+    template <typename OperandType>
+    friend inline DerivedType operator +(const OperandType &val,const DerivedType& F){
         return F + val;
     }
 
-    friend inline DerivedType operator -(const V &val,const DerivedType& F){
+    template <typename OperandType>
+    friend inline DerivedType operator -(const OperandType &val,const DerivedType& F){
         GridObject G(F.Grid, F.values.size());
         for(size_t i=0;i<F.values.size();++i)
             G.values[i] = val - F.values[i];
         return G;
     }
 
-    friend inline DerivedType operator *(const V &val,const DerivedType& F){
+    template <typename OperandType>
+    friend inline DerivedType operator *(const OperandType &val,const DerivedType& F){
         return F * val;
     }
-    friend inline DerivedType operator /(const V &val,const DerivedType& F){
+    template <typename OperandType>
+    friend inline DerivedType operator /(const OperandType &val,const DerivedType& F){
         GridObject G(F.Grid, F.values.size());
         for(size_t i=0;i<F.values.size();++i)
             G.values[i] = val / F.values[i];

@@ -281,6 +281,40 @@ extern inline std::map<std::string, std::vector<double>> CSVTable(std::istream &
 	return Funcs;
 };
 
+template <typename stream_type>
+extern inline std::vector<std::vector<double>> ParseDat(stream_type && stream,bool header=false){
+
+    std::vector<std::vector<double>> Funcs;
+
+    /*
+    std::ifstream ifs(filename, std::ifstream::in);
+
+    if(!ifs.is_open()){
+        throw std::runtime_error(std::string("CSVTable error: no such file: ") + filename);
+    }
+    */
+    std::string S;
+    if(header)
+        std::getline(stream,S);
+
+
+    std::getline(stream,S);
+    std::vector<double> first_row = parse_string<double>(S);
+    Funcs.resize(first_row.size());
+    for(size_t i=0;i<first_row.size();++i)
+        Funcs[i].push_back(first_row[i]);
+
+    while(!stream.eof()){
+        std::getline(stream,S);
+        auto nums = parse_string<double>(S);
+        if(nums.size()>=Funcs.size()){
+            for(size_t i=0;i<Funcs.size();i++){
+                Funcs[i].push_back(nums[i]);
+            }
+        }
+    }
+    return Funcs;
+};
 
 /*GridObject*/
 
