@@ -220,7 +220,7 @@ public:
         set_tmp();
     }
     template <typename Functype>
-    void add_pipe(const Functype &F, std::string name){
+    void add_pipe( Functype &&F, std::string name){
         if(name == ""){
            name = std::to_string(rand()%10000);
         }
@@ -291,6 +291,19 @@ public:
     }
     void command(const std::string & cmd){
         (*tmp_func).second(cmd);
+    }
+    void exec(){
+        std::string S;
+        while(1){
+            std::cout << tmp_pipe() << ">";
+            std::getline(std::cin,S);
+            if(S == "quit" or S == "exit"){
+                return;
+            }
+            if(!process_string(S)){
+                command(S);
+            }
+        }
     }
 };
 
