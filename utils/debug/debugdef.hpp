@@ -144,7 +144,7 @@ struct Gnuplot{
 	FILE *gp;
 	public:
     Gnuplot(const std::string & path = GNUPLOT_PATH){
-		gp = popen(path.c_str(),"w");
+        gp = popen(path.c_str(),"w");
 		if (!gp) { perror("popen gnuplot"); exit(EXIT_FAILURE); };
         show_cmd = "plot";
 	}

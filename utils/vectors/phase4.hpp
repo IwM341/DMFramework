@@ -8,9 +8,9 @@ class vec3{
 public:
 	double x,y,z;
 	
-	inline vec3():x(0),y(0),z(0){}
+    inline vec3() noexcept:x(0),y(0),z(0){}
 	
-	inline vec3(double x,double y,double z):
+    inline vec3(double x,double y,double z)noexcept:
 		x(x),y(y),z(z) {}
 	
 	inline static vec3 Polar(double r,double theta,double phi){
