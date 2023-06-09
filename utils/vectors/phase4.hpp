@@ -44,7 +44,7 @@ public:
 		return vec3(x*a,y*a,z*a);
 	}
 	inline vec3 operator /(double a) const{
-		return vec3(x/a,y/a,z/a);
+        return (*this) * (1/a);
 	}
 	inline vec3 operator *=(double a){
 		x*=a;
@@ -53,10 +53,8 @@ public:
 		return *this;
 	}
 	inline vec3 operator /=(double a){
-		x/=a;
-		y/=a;
-		z/=a;
-		return *this;
+        double _a = 1/a;
+        return (*this) *= _a;
 	}
 	
 	inline double operator*(const vec3 &second) const{
@@ -70,6 +68,26 @@ public:
 	inline double norm() const{
 		return sqrt(quad());
 	}
+
+    inline void normalize()noexcept{
+        double _q = norm();
+        if(_q > 0){
+             (*this)/=_q;
+        }
+        else{
+            z = 1;
+        }
+    }
+
+    inline vec3 normalized() const noexcept{
+        double _q = norm();
+        if(_q > 0){
+            return (*this)/_q;
+        }
+        else{
+            return vec3(0,0,1);
+        }
+    }
 
     friend std::ostream & operator << (std::ostream & os,const vec3 & V){
         os << "vec3( " << V.x << ", " << V.y << ", " << V.z << ")";

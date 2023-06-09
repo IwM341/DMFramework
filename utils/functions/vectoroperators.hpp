@@ -151,10 +151,20 @@ inline T vector_sum(const std::vector<T> & V){
         summ += V[i];
     return summ;
 }
+
+
+template <typename Functype>
+inline auto sum_lambda(size_t size,Functype && F){
+    typename std::decay<decltype(F(0))>::type summ = 0;
+    for(size_t i=0;i<size;++i)
+        summ += F(i);
+    return summ;
+}
+
 //CREATE VECTOR FROM LAMBDA
 template<typename LambdaType>
-inline auto Vector(size_t N,const LambdaType &F){
-	std::vector<typename std::invoke_result<LambdaType, int>::type> Y(N);
+inline auto Vector(size_t N, LambdaType &&F){
+    std::vector<decltype(F(0))> Y(N);
 	for(size_t i=0;i<N;++i){
 		Y[i] = F(i);
 	}

@@ -66,6 +66,9 @@ public:
     template <typename FilenameType>
     static BodyModel fromFile(double VescOnR,const FilenameType & filename){
         std::ifstream ifs(filename);
+        if(!ifs.is_open()){
+            throw std::runtime_error(std::string("can't open file: ")+filename);
+        }
         return BodyModel(VescOnR,ifs);
     }
 	const std::vector<double> &operator[](const std::string & column) const{

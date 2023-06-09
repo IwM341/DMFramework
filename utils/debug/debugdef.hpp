@@ -23,6 +23,8 @@ std::ostream & operator << (std::ostream & os, const std::pair<U,V> & P){
 namespace debugdefs{
 
 
+
+
     template <typename T>
     std::string to_debug_string(const T &x){
         std::ostringstream os;
@@ -35,6 +37,30 @@ namespace debugdefs{
         return to_debug_string(x.first)+"\t"+to_debug_string(x.second);
     }
 
+    template <typename Tuple,int remain>
+    struct __tuple_elements_string_list{
+        constexpr static int i = std::tuple_size<Tuple>::value - remain;
+        static std::string get_list(Tuple const & _Tp,const std::string &delim){
+            return to_debug_string(std::get<i>(_Tp)) + delim +
+                    __tuple_elements_string_list<Tuple,remain-1>::get_list(_Tp,delim);
+        }
+    };
+
+    template <class Tuple>
+    struct __tuple_elements_string_list<Tuple,0>{
+        static std::string get_list(Tuple const & _Tp,const std::string &delim){
+            return "";
+        }
+    };
+
+    template<typename...Args>
+    std::string to_debug_string(const std::tuple<Args...> &Tp){
+        return "(" +
+                __tuple_elements_string_list<
+                    std::tuple<Args...>,
+                    std::tuple_size<std::tuple<Args...>>::value
+                        >::get_list(Tp,", ") + ")";
+    }
 
 };
 #define SVAR(x) (std::string(#x) + std::string(" = ") + debugdefs::to_debug_string(x))
@@ -445,8 +471,8 @@ void show_for_progress(size_t N,const FuncType_M &M_Func,const RoutineType & Rou
 }
 
 class show_prog{
-    const std::string&prefix;
-    const std::string&postfix;
+    std::string prefix;
+    std::string postfix;
     std::mutex m;
     int barWidth;
     int _pos;
@@ -455,17 +481,19 @@ public:
               const std::string&postfix = ""):
         barWidth(barWidth),prefix(prefix),postfix(postfix){
         _pos = 0;
+        _show(0,0);
     }
 private:
     void _show(int pos,float progress){
-        std::cout.flush();
+        if(pos !=0)
+            std::cout.flush();
         std::cout << prefix << "[";
         for (int j = 0; j < barWidth; ++j) {
             if (j < pos) std::cout << "=";
             else if (j == pos) std::cout << ">";
             else std::cout << " ";
         }
-        std::cout << "] " << int(progress * 100.0) << " %" << postfix << "\r";;
+        std::cout << "] " << int(progress * 100.0 + 0.5) << " %" << postfix << "\r";//std::endl;
     }
 public:
     void show(float progress){
@@ -482,6 +510,47 @@ public:
     }
     ~show_prog(){
         end();
+    }
+};
+
+class progress_bar{
+    std::string prefix;
+    std::string postfix;
+    std::mutex m;
+    size_t  cur_prog,full_prog;
+    int barWidth;
+    int _pos;
+public:
+    progress_bar(size_t full_prog,size_t barWidth = 100, std::string prefix = "",
+                std::string postfix = ""):
+        prefix(std::move(prefix)),postfix(std::move(postfix)),
+        cur_prog(0),full_prog(full_prog),barWidth(barWidth),_pos(0){
+        show();
+    }
+
+    void show(){
+        std::cout << prefix << "[";
+        for (int j = 0; j < barWidth; ++j) {
+            if (j < _pos) std::cout << "=";
+            else if (j == _pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << int(cur_prog * 100.0/full_prog + 0.5) << " %" << std::endl;
+    }
+    void operator ++(){
+        m.lock();
+        cur_prog++;
+        int new_pos = cur_prog*barWidth/full_prog;
+        if(new_pos > _pos){
+            while(_pos != new_pos){
+                _pos++;
+            }
+            show();
+        }
+        m.unlock();
+    }
+    void operator ++(int){
+        ++(*this);
     }
 };
 
